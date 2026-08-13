@@ -53,7 +53,7 @@ jobs:
         echo "${HEAD_SHA} is the current head of PR #${PR_NUMBER}."
 
     - name: Checkout trusted code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
     - name: Find existing lifecycle comment
       id: find_comment
@@ -80,7 +80,7 @@ jobs:
           > <sub>Full process: [Dependency Updates](${{ env.DOCS_URL }}).</sub>
 
     - name: Checkout PR lockfiles only
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       with:
         ref: ${{ inputs.head_sha }}
         path: pr
@@ -89,7 +89,7 @@ jobs:
         sparse-checkout-cone-mode: false
 
     - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
       with:
         python-version: "3.13"
 
