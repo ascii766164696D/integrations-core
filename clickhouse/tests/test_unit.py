@@ -577,27 +577,27 @@ def test_cluster_topology_metadata():
 
     assert metadata == {
         'cluster_name': 'default',
-        'cluster_node': 'node-a',
+        'connect_node': 'node-a',
         'nodes': ['node-a', 'node-b', 'node-c'],
         'node_count': 3,
     }
 
 
 @pytest.mark.parametrize(
-    ('cluster_name', 'connected_node', 'nodes_result', 'expected'),
+    ('cluster_name', 'connect_node', 'nodes_result', 'expected'),
     [
-        pytest.param(None, 'node-a', [['node-a']], {'cluster_node', 'nodes', 'node_count'}, id='no-cluster-name'),
-        pytest.param('default', None, [['node-a']], {'cluster_name', 'nodes', 'node_count'}, id='no-connected-node'),
-        pytest.param('default', 'node-a', Error('boom'), {'cluster_name', 'cluster_node'}, id='fan-out-failed'),
-        pytest.param('default', 'node-a', [], {'cluster_name', 'cluster_node'}, id='no-rows'),
+        pytest.param(None, 'node-a', [['node-a']], {'connect_node', 'nodes', 'node_count'}, id='no-cluster-name'),
+        pytest.param('default', None, [['node-a']], {'cluster_name', 'nodes', 'node_count'}, id='no-connect-node'),
+        pytest.param('default', 'node-a', Error('boom'), {'cluster_name', 'connect_node'}, id='fan-out-failed'),
+        pytest.param('default', 'node-a', [], {'cluster_name', 'connect_node'}, id='no-rows'),
     ],
 )
-def test_cluster_topology_metadata_omits_what_it_cannot_determine(cluster_name, connected_node, nodes_result, expected):
+def test_cluster_topology_metadata_omits_what_it_cannot_determine(cluster_name, connect_node, nodes_result, expected):
     """An absent key beats a wrong one: a failed probe must not report a cluster with no nodes."""
     check = make_query_replaying_check({CLUSTER_NODES_QUERY: nodes_result})
     with mock.patch.object(ClickhouseCheck, 'cluster_name', new_callable=mock.PropertyMock) as cluster_name_prop:
         cluster_name_prop.return_value = cluster_name
-        metadata = check._cluster_topology_metadata(connected_node)
+        metadata = check._cluster_topology_metadata(connect_node)
 
     assert set(metadata) == expected
 
@@ -633,7 +633,7 @@ def emitted_metadata(aggregator):
             True,
             {
                 'cluster_name': 'default',
-                'cluster_node': 'node-a',
+                'connect_node': 'node-a',
                 'nodes': ['node-a', 'node-b'],
                 'node_count': 2,
             },

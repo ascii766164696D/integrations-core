@@ -231,12 +231,12 @@ class ClickhouseCheck(DatabaseCheck):
         """Send database instance metadata to the metadata intake."""
         current_time = time()
         if current_time - self._database_instance_last_emitted >= DATABASE_INSTANCE_COLLECTION_INTERVAL:
-            connected_node = None
+            connect_node = None
             # Get the version for the metadata (and cache it)
             try:
                 row = list(self.execute_query_raw('SELECT version(), hostName()'))[0]
                 self._dbms_version = row[0]
-                connected_node = str(row[1])
+                connect_node = str(row[1])
             except Exception as e:
                 self.log.debug("Unable to fetch version for metadata: %s", e)
                 self._dbms_version = "unknown"
@@ -251,7 +251,7 @@ class ClickhouseCheck(DatabaseCheck):
                 "hosting_type": self.hosting_type,
             }
             if self.is_single_endpoint_mode:
-                metadata.update(self._cluster_topology_metadata(connected_node))
+                metadata.update(self._cluster_topology_metadata(connect_node))
 
             event = {
                 "host": self.reported_hostname,
@@ -424,18 +424,18 @@ class ClickhouseCheck(DatabaseCheck):
         self.log.debug('No ClickHouse cluster name found; %s tag will not be emitted', CLUSTER_TAG)
         return None
 
-    def _cluster_topology_metadata(self, connected_node: str | None) -> dict:
+    def _cluster_topology_metadata(self, connect_node: str | None) -> dict:
         """The node inventory behind a single endpoint, for the database_instance payload.
 
         Keys are omitted rather than reported empty: a failed query should not tell the backend
-        that a cluster has no nodes. ``connected_node`` is the node that served this emission,
+        that a cluster has no nodes. ``connect_node`` is the node that served this emission,
         which behind a load balancer is not a stable assignment.
         """
         metadata = {}
         if self.cluster_name:
             metadata["cluster_name"] = self.cluster_name
-        if connected_node:
-            metadata["cluster_node"] = connected_node
+        if connect_node:
+            metadata["connect_node"] = connect_node
         nodes = self._resolve_cluster_nodes()
         if nodes:
             metadata["nodes"] = nodes

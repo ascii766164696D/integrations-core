@@ -13,7 +13,7 @@ from .common import CLICKHOUSE_VERSION
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures('dd_environment')]
 
-CLUSTER_TOPOLOGY_KEYS = frozenset({'cluster_name', 'cluster_node', 'nodes', 'node_count'})
+CLUSTER_TOPOLOGY_KEYS = frozenset({'cluster_name', 'connect_node', 'nodes', 'node_count'})
 
 
 def test_check(aggregator, instance, dd_run_check):
@@ -164,7 +164,7 @@ def test_database_instance_metadata_cluster_topology(aggregator, instance, dd_ru
     assert event['metadata']['cluster_name'] == 'default'
     assert event['metadata']['nodes'] == ['node-a', 'node-b', 'node-c']
     assert event['metadata']['node_count'] == 3
-    assert event['metadata']['cluster_node']
+    assert event['metadata']['connect_node']
 
 
 def test_database_instance_metadata_omits_cluster_topology_when_unresolved(aggregator, instance, dd_run_check):
