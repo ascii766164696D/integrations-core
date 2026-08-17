@@ -247,6 +247,8 @@ class ClickhouseCheck(DatabaseCheck):
             metadata = {
                 "dbm": self._config.dbm,
                 "connection_host": self._config.server,
+                # Always present: resolves to 'unknown' rather than None when the probes are inconclusive.
+                "hosting_type": self.hosting_type,
             }
             if self.is_single_endpoint_mode:
                 metadata.update(self._cluster_topology_metadata(connected_node))

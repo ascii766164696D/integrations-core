@@ -138,6 +138,7 @@ def test_database_instance_metadata(aggregator, instance, datadog_agent, dd_run_
     assert 'dbm' in event['metadata']
     assert 'connection_host' in event['metadata']
     assert event['metadata']['connection_host'] == instance['server']
+    assert event['metadata']['hosting_type'] == check.hosting_type
     assert not CLUSTER_TOPOLOGY_KEYS & set(event['metadata'])
 
 

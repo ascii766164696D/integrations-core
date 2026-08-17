@@ -653,7 +653,7 @@ def test_database_instance_payload_carries_cluster_topology(aggregator, instance
     metadata = emitted_metadata(aggregator)
 
     assert {key: metadata[key] for key in expected} == expected
-    assert set(metadata) == {'dbm', 'connection_host'} | set(expected)
+    assert set(metadata) == {'dbm', 'connection_host', 'hosting_type'} | set(expected)
 
 
 def test_database_instance_payload_still_reports_the_version_when_the_host_probe_fails(aggregator, instance):
@@ -665,7 +665,22 @@ def test_database_instance_payload_still_reports_the_version_when_the_host_probe
         check._send_database_instance_metadata()
 
     assert check.dbms_version == 'unknown'
-    assert set(emitted_metadata(aggregator)) == {'dbm', 'connection_host', 'cluster_name'}
+    metadata = emitted_metadata(aggregator)
+
+    assert set(metadata) == {'dbm', 'connection_host', 'hosting_type', 'cluster_name'}
+    assert metadata['hosting_type'] == HostingType.UNKNOWN
+
+
+@pytest.mark.parametrize('single_endpoint_mode', [True, False], ids=['single-endpoint-mode', 'direct-connection'])
+def test_database_instance_payload_carries_the_hosting_type(aggregator, instance, single_endpoint_mode):
+    """The hosting type describes the deployment itself, so both connection modes report it."""
+    instance = {**instance, 'single_endpoint_mode': single_endpoint_mode}
+    check = make_metadata_emitting_check(instance, [['node-a']])
+    with mock.patch.object(ClickhouseCheck, 'hosting_type', new_callable=mock.PropertyMock) as hosting_type:
+        hosting_type.return_value = HostingType.CLOUD
+        check._send_database_instance_metadata()
+
+    assert emitted_metadata(aggregator)['hosting_type'] == HostingType.CLOUD
 
 
 def test_check_tags_with_cluster(instance):

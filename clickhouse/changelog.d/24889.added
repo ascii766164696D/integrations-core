@@ -1,1 +1,1 @@
-Add cluster node inventory to the ``database_instance`` metadata payload in single endpoint mode.
+Add the hosting type to the ``database_instance`` metadata payload, and the cluster node inventory in single endpoint mode.
