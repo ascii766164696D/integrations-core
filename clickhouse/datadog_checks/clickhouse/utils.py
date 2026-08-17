@@ -74,6 +74,11 @@ CLUSTER_NAME_QUERY = (
 )
 
 
+CLUSTER_NODES_QUERY = (
+    "SELECT hostName() FROM clusterAllReplicas('default', system.one) SETTINGS skip_unavailable_shards=1"
+)
+
+
 HOSTING_TYPE_TAG = 'hosting_type'
 
 

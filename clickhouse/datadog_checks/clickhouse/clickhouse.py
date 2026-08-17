@@ -27,6 +27,7 @@ from .utils import (
     CLOUD_MODE_QUERY,
     CLUSTER_MACRO_QUERY,
     CLUSTER_NAME_QUERY,
+    CLUSTER_NODES_QUERY,
     CLUSTER_TAG,
     HOSTING_TYPE_TAG,
     SHARED_MERGE_TREE_QUERY,
@@ -230,16 +231,25 @@ class ClickhouseCheck(DatabaseCheck):
         """Send database instance metadata to the metadata intake."""
         current_time = time()
         if current_time - self._database_instance_last_emitted >= DATABASE_INSTANCE_COLLECTION_INTERVAL:
+            connected_node = None
             # Get the version for the metadata (and cache it)
             try:
-                version_result = list(self.execute_query_raw('SELECT version()'))[0][0]
-                self._dbms_version = version_result
+                row = list(self.execute_query_raw('SELECT version(), hostName()'))[0]
+                self._dbms_version = row[0]
+                connected_node = str(row[1])
             except Exception as e:
                 self.log.debug("Unable to fetch version for metadata: %s", e)
                 self._dbms_version = "unknown"
 
             # Get tags without db: prefix for metadata
             tags_no_db = [t for t in self.tags if not t.startswith('db:')]
+
+            metadata = {
+                "dbm": self._config.dbm,
+                "connection_host": self._config.server,
+            }
+            if self.is_single_endpoint_mode:
+                metadata.update(self._cluster_topology_metadata(connected_node))
 
             event = {
                 "host": self.reported_hostname,
@@ -255,10 +265,7 @@ class ClickhouseCheck(DatabaseCheck):
                 "integration_version": __version__,
                 "tags": tags_no_db,
                 "timestamp": current_time * 1000,
-                "metadata": {
-                    "dbm": self._config.dbm,
-                    "connection_host": self._config.server,
-                },
+                "metadata": metadata,
             }
 
             self._database_instance_last_emitted = current_time
@@ -414,6 +421,33 @@ class ClickhouseCheck(DatabaseCheck):
         # Deliberately no 'default' fallback: an absent tag is better than a wrong one.
         self.log.debug('No ClickHouse cluster name found; %s tag will not be emitted', CLUSTER_TAG)
         return None
+
+    def _cluster_topology_metadata(self, connected_node: str | None) -> dict:
+        """The node inventory behind a single endpoint, for the database_instance payload.
+
+        Keys are omitted rather than reported empty: a failed query should not tell the backend
+        that a cluster has no nodes. ``connected_node`` is the node that served this emission,
+        which behind a load balancer is not a stable assignment.
+        """
+        metadata = {}
+        if self.cluster_name:
+            metadata["cluster_name"] = self.cluster_name
+        if connected_node:
+            metadata["cluster_node"] = connected_node
+        nodes = self._resolve_cluster_nodes()
+        if nodes:
+            metadata["nodes"] = nodes
+            metadata["node_count"] = len(nodes)
+        return metadata
+
+    def _resolve_cluster_nodes(self) -> list[str]:
+        """Sorted, de-duplicated cluster node names, or an empty list when the fan-out fails."""
+        try:
+            rows = self.execute_query_raw(CLUSTER_NODES_QUERY)
+        except Exception as e:
+            self.log.debug('Unable to enumerate cluster nodes: %s', e)
+            return []
+        return sorted({str(row[0]) for row in rows if row and row[0]})
 
     @property
     def hosting_type(self) -> str:
